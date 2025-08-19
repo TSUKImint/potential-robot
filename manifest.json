@@ -8,6 +8,5 @@
     "author": "SillyTavern Community",
     "version": "1.0.0",
     "homePage": "https://github.com/your-username/st-context-sounds",
-    "auto_update": true,
-    "description": "AI-powered contextual sound effects that intelligently trigger based on story actions and dialogue context, not simple keyword matching."
+    "auto_update": false
 }
