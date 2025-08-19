@@ -1,22 +1,149 @@
-<!-- You might want to add additional HTML elements to ST. 
-    It's good practice to separate it out from your code -->
-<div class="example-extension-settings">
+<div class="context-sounds-settings">
     <div class="inline-drawer">
         <div class="inline-drawer-toggle inline-drawer-header">
-            <b>Extension Example</b>
+            <b>🔊 Contextual Sound Effects</b>
             <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
         </div>
         <div class="inline-drawer-content">
-            <div class="example-extension_block flex-container">
-                <input id="my_button" class="menu_button" type="submit" value="Example Button" />
+            
+            <!-- Main Controls -->
+            <div class="context-sounds_block flex-container">
+                <input id="context-sounds-enabled" type="checkbox" />
+                <label for="context-sounds-enabled">Enable Contextual Sound Effects</label>
             </div>
-
-            <div class="example-extension_block flex-container">
-                <input id="example_setting" type="checkbox" />
-                <label for="example_setting">This is an example</label>
+            
+            <div class="context-sounds_block">
+                <label for="context-sounds-volume">Volume: <span id="context-sounds-volume-display">70%</span></label>
+                <input id="context-sounds-volume" type="range" min="0" max="1" step="0.1" value="0.7" class="slider" />
+            </div>
+            
+            <div class="context-sounds_block">
+                <label for="context-sounds-sensitivity">Context Sensitivity: <span id="context-sounds-sensitivity-display">80%</span></label>
+                <input id="context-sounds-sensitivity" type="range" min="0.1" max="1" step="0.1" value="0.8" class="slider" />
+                <small>Higher values = more strict context matching</small>
             </div>
 
             <hr class="sysHR" />
+            
+            <!-- Sound Categories -->
+            <div class="context-sounds_block">
+                <h4>Sound Categories</h4>
+                <div class="context-sounds-categories">
+                    <div class="context-sounds_block flex-container">
+                        <input id="context-sounds-category-emotions" type="checkbox" />
+                        <label for="context-sounds-category-emotions">😄 Emotions (laugh, cry, sigh)</label>
+                    </div>
+                    
+                    <div class="context-sounds_block flex-container">
+                        <input id="context-sounds-category-actions" type="checkbox" />
+                        <label for="context-sounds-category-actions">👣 Actions (footsteps, doors, movement)</label>
+                    </div>
+                    
+                    <div class="context-sounds_block flex-container">
+                        <input id="context-sounds-category-ambient" type="checkbox" />
+                        <label for="context-sounds-category-ambient">🌊 Ambient (wind, rain, atmosphere)</label>
+                    </div>
+                    
+                    <div class="context-sounds_block flex-container">
+                        <input id="context-sounds-category-dialogue" type="checkbox" />
+                        <label for="context-sounds-category-dialogue">💬 Dialogue (whisper, shout, speech)</label>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="sysHR" />
+            
+            <!-- Advanced Settings -->
+            <details class="context-sounds_block">
+                <summary>Advanced Settings</summary>
+                
+                <div class="context-sounds_block">
+                    <label for="context-sounds-repeat-delay">Repeat Prevention (ms):</label>
+                    <input id="context-sounds-repeat-delay" type="number" min="500" max="10000" step="500" value="2000" />
+                    <small>Minimum time between same sound effects</small>
+                </div>
+                
+                <div class="context-sounds_block">
+                    <label for="context-sounds-max-concurrent">Max Concurrent Sounds:</label>
+                    <input id="context-sounds-max-concurrent" type="number" min="1" max="10" value="3" />
+                </div>
+                
+                <div class="context-sounds_block flex-container">
+                    <input id="context-sounds-variations" type="checkbox" />
+                    <label for="context-sounds-variations">Enable Sound Variations</label>
+                    <small>Use multiple variations of each sound to prevent repetition</small>
+                </div>
+                
+                <div class="context-sounds_block flex-container">
+                    <input id="context-sounds-debug" type="checkbox" />
+                    <label for="context-sounds-debug">Debug Mode</label>
+                    <small>Log sound trigger decisions to console</small>
+                </div>
+            </details>
+
+            <hr class="sysHR" />
+            
+            <!-- Sound Library Management -->
+            <details class="context-sounds_block">
+                <summary>Sound Library</summary>
+                
+                <div class="context-sounds_block">
+                    <h5>Built-in Sounds</h5>
+                    <div class="context-sounds-sound-list">
+                        <div class="sound-item">
+                            <span>😄 Laughter</span>
+                            <small>3 variations • Context-aware triggers</small>
+                        </div>
+                        <div class="sound-item">
+                            <span>👣 Footsteps</span>
+                            <small>3 variations • Movement detection</small>
+                        </div>
+                        <div class="sound-item">
+                            <span>🚪 Doors</span>
+                            <small>3 variations • Open/close detection</small>
+                        </div>
+                        <div class="sound-item">
+                            <span>🌊 Ambient</span>
+                            <small>Weather and atmosphere sounds</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="context-sounds_block">
+                    <h5>Custom Sounds</h5>
+                    <p><small>Place custom .mp3/.wav files in: <code>data/[user]/extensions/st-context-sounds/sounds/custom/</code></small></p>
+                    <button id="context-sounds-refresh-library" class="menu_button">Refresh Library</button>
+                </div>
+            </details>
+
+            <hr class="sysHR" />
+            
+            <!-- Testing -->
+            <div class="context-sounds_block">
+                <h4>Testing</h4>
+                <button id="context-sounds-test" class="menu_button">Test Sound Effects</button>
+                <small>Plays example sounds with sample text: "She laughed and walked to the door."</small>
+            </div>
+            
+            <!-- Performance Info -->
+            <details class="context-sounds_block">
+                <summary>Performance & Info</summary>
+                <div class="context-sounds-info">
+                    <div class="info-item">
+                        <strong>AI-Assisted Context Analysis:</strong><br>
+                        <small>Uses advanced pattern matching and context rules to prevent false triggers</small>
+                    </div>
+                    <div class="info-item">
+                        <strong>Smart Exclusion Patterns:</strong><br>
+                        <small>Automatically excludes phrases like "don't laugh" or "stop walking"</small>
+                    </div>
+                    <div class="info-item">
+                        <strong>Loaded Sounds:</strong> <span id="context-sounds-loaded-count">0</span><br>
+                        <strong>Memory Usage:</strong> <span id="context-sounds-memory">Calculating...</span>
+                    </div>
+                </div>
+            </details>
+
         </div>
     </div>
 </div>
