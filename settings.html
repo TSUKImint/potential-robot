@@ -23,12 +23,6 @@
                 <small>Higher values = more strict context matching</small>
             </div>
 
-            <div class="context-sounds_block flex-container">
-                <input id="context-sounds-ai-analysis" type="checkbox" />
-                <label for="context-sounds-ai-analysis">🤖 Enable AI Context Analysis</label>
-                <small>Uses your connected LLM for smarter context detection</small>
-            </div>
-
             <hr class="sysHR" />
             
             <!-- Sound Categories -->
@@ -59,118 +53,17 @@
 
             <hr class="sysHR" />
             
-            <!-- Advanced Settings -->
-            <details class="context-sounds_block">
-                <summary>Advanced Settings</summary>
-                
-                <div class="context-sounds_block">
-                    <label for="context-sounds-repeat-delay">Repeat Prevention (ms):</label>
-                    <input id="context-sounds-repeat-delay" type="number" min="500" max="10000" step="500" value="2000" />
-                    <small>Minimum time between same sound effects</small>
-                </div>
-                
-                <div class="context-sounds_block">
-                    <label for="context-sounds-max-concurrent">Max Concurrent Sounds:</label>
-                    <input id="context-sounds-max-concurrent" type="number" min="1" max="10" value="3" />
-                </div>
-                
-                <div class="context-sounds_block flex-container">
-                    <input id="context-sounds-variations" type="checkbox" />
-                    <label for="context-sounds-variations">Enable Sound Variations</label>
-                    <small>Use multiple variations of each sound to prevent repetition</small>
-                </div>
-                
-                <div class="context-sounds_block flex-container">
-                    <input id="context-sounds-debug" type="checkbox" />
-                    <label for="context-sounds-debug">Debug Mode</label>
-                    <small>Log sound trigger decisions to console</small>
-                </div>
-                
-                <div class="context-sounds_block">
-                    <label for="context-sounds-ai-timeout">AI Analysis Timeout (ms):</label>
-                    <input id="context-sounds-ai-timeout" type="number" min="1000" max="30000" step="1000" value="5000" />
-                    <small>Maximum time to wait for AI analysis before fallback</small>
-                </div>
-                
-                <div class="context-sounds_block flex-container">
-                    <input id="context-sounds-sound-suggestions" type="checkbox" />
-                    <label for="context-sounds-sound-suggestions">Enable AI Sound Suggestions</label>
-                    <small>AI can suggest new sounds for unrecognized patterns</small>
-                </div>
-            </details>
-
-            <hr class="sysHR" />
-            
-            <!-- Sound Library Management -->
-            <details class="context-sounds_block">
-                <summary>Sound Library</summary>
-                
-                <div class="context-sounds_block">
-                    <h5>Built-in Sounds</h5>
-                    <div class="context-sounds-sound-list">
-                        <div class="sound-item">
-                            <span>😄 Laughter</span>
-                            <small>3 variations • Context-aware triggers</small>
-                        </div>
-                        <div class="sound-item">
-                            <span>👣 Footsteps</span>
-                            <small>3 variations • Movement detection</small>
-                        </div>
-                        <div class="sound-item">
-                            <span>🚪 Doors</span>
-                            <small>3 variations • Open/close detection</small>
-                        </div>
-                        <div class="sound-item">
-                            <span>🌊 Ambient</span>
-                            <small>Weather and atmosphere sounds</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="context-sounds_block">
-                    <h5>Custom Sounds</h5>
-                    <p><small>Place custom .mp3/.wav files in: <code>data/[user]/extensions/st-context-sounds/sounds/custom/</code></small></p>
-                    <button id="context-sounds-refresh-library" class="menu_button">Refresh Library</button>
-                </div>
-            </details>
-
-            <hr class="sysHR" />
-            
-            <!-- Testing & AI Features -->
+            <!-- Testing -->
             <div class="context-sounds_block">
-                <h4>Testing & AI Features</h4>
+                <h4>Testing</h4>
                 <div class="context-sounds_block">
                     <label for="context-sounds-test-text">Test Text:</label>
                     <input id="context-sounds-test-text" type="text" placeholder="She laughed nervously and stepped back." style="width: 100%; margin: 5px 0;" />
                 </div>
                 <div class="context-sounds_block flex-container">
                     <button id="context-sounds-test" class="menu_button">Test Sound Effects</button>
-                    <button id="context-sounds-suggest" class="menu_button">AI Suggest Sounds</button>
-                </div>
-                <div class="context-sounds_block">
-                    <small><strong>AI Suggestions:</strong> <span id="context-sounds-suggestions">Enter text and click "AI Suggest Sounds"</span></small>
                 </div>
             </div>
-            
-            <!-- Performance Info -->
-            <details class="context-sounds_block">
-                <summary>Performance & Info</summary>
-                <div class="context-sounds-info">
-                    <div class="info-item">
-                        <strong>🤖 AI-Powered Context Analysis:</strong><br>
-                        <small>Uses your connected LLM (OpenAI, Claude, local models) for intelligent context understanding</small>
-                    </div>
-                    <div class="info-item">
-                        <strong>Smart Exclusion Patterns:</strong><br>
-                        <small>AI automatically excludes phrases like "don't laugh" or "stop walking"</small>
-                    </div>
-                    <div class="info-item">
-                        <strong>Loaded Sounds:</strong> <span id="context-sounds-loaded-count">0</span><br>
-                        <strong>Memory Usage:</strong> <span id="context-sounds-memory">Calculating...</span><br>
-                        <strong>AI Status:</strong> <span id="context-sounds-ai-status">Checking...</span>
-                    </div>
-                </div>
-            </details>
 
         </div>
     </div>
