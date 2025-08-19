@@ -1,70 +1,47 @@
-<div class="context-sounds-settings">
-    <div class="inline-drawer">
-        <div class="inline-drawer-toggle inline-drawer-header">
-            <b>🔊 Contextual Sound Effects</b>
-            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
-        </div>
-        <div class="inline-drawer-content">
-            
-            <!-- Main Controls -->
-            <div class="context-sounds_block flex-container">
-                <input id="context-sounds-enabled" type="checkbox" />
-                <label for="context-sounds-enabled">Enable Contextual Sound Effects</label>
-            </div>
-            
-            <div class="context-sounds_block">
-                <label for="context-sounds-volume">Volume: <span id="context-sounds-volume-display">70%</span></label>
-                <input id="context-sounds-volume" type="range" min="0" max="1" step="0.1" value="0.7" class="slider" />
-            </div>
-            
-            <div class="context-sounds_block">
-                <label for="context-sounds-sensitivity">Context Sensitivity: <span id="context-sounds-sensitivity-display">80%</span></label>
-                <input id="context-sounds-sensitivity" type="range" min="0.1" max="1" step="0.1" value="0.8" class="slider" />
-                <small>Higher values = more strict context matching</small>
-            </div>
-
-            <hr class="sysHR" />
-            
-            <!-- Sound Categories -->
-            <div class="context-sounds_block">
-                <h4>Sound Categories</h4>
-                <div class="context-sounds-categories">
-                    <div class="context-sounds_block flex-container">
-                        <input id="context-sounds-category-emotions" type="checkbox" />
-                        <label for="context-sounds-category-emotions">😄 Emotions (laugh, cry, sigh)</label>
-                    </div>
-                    
-                    <div class="context-sounds_block flex-container">
-                        <input id="context-sounds-category-actions" type="checkbox" />
-                        <label for="context-sounds-category-actions">👣 Actions (footsteps, doors, movement)</label>
-                    </div>
-                    
-                    <div class="context-sounds_block flex-container">
-                        <input id="context-sounds-category-ambient" type="checkbox" />
-                        <label for="context-sounds-category-ambient">🌊 Ambient (wind, rain, atmosphere)</label>
-                    </div>
-                    
-                    <div class="context-sounds_block flex-container">
-                        <input id="context-sounds-category-dialogue" type="checkbox" />
-                        <label for="context-sounds-category-dialogue">💬 Dialogue (whisper, shout, speech)</label>
-                    </div>
-                </div>
-            </div>
-
-            <hr class="sysHR" />
-            
-            <!-- Testing -->
-            <div class="context-sounds_block">
-                <h4>Testing</h4>
-                <div class="context-sounds_block">
-                    <label for="context-sounds-test-text">Test Text:</label>
-                    <input id="context-sounds-test-text" type="text" placeholder="She laughed nervously and stepped back." style="width: 100%; margin: 5px 0;" />
-                </div>
-                <div class="context-sounds_block flex-container">
-                    <button id="context-sounds-test" class="menu_button">Test Sound Effects</button>
-                </div>
-            </div>
-
-        </div>
+<!-- settings panel for Smart Sound Triggers -->
+<div class="st-soundtriggers-settings">
+  <div class="inline-drawer">
+    <div class="inline-drawer-toggle inline-drawer-header">
+      <b>Smart Sound Triggers</b>
+      <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
     </div>
+
+    <div class="inline-drawer-content">
+      <div class="st-block">
+        <label><input id="sst_enable" type="checkbox" /> Enable Smart Sound Triggers</label>
+      </div>
+
+      <div class="st-block">
+        <label>Master volume: <input id="sst_volume" type="range" min="0" max="1" step="0.01" value="0.8" /></label>
+      </div>
+
+      <div class="st-block">
+        <label>Per-action cooldown (seconds): <input id="sst_cooldown" type="number" min="0" step="0.5" value="2.5" /></label>
+      </div>
+
+      <div class="st-block">
+        <label>Add sound URL (http(s) or relative path in extension folder):</label>
+        <input id="sst_new_sound_url" type="text" placeholder="https://.../laugh1.mp3" />
+        <select id="sst_new_sound_action">
+          <option value="laugh">laugh</option>
+          <option value="footstep">footstep</option>
+          <option value="rustle">rustle</option>
+          <option value="door">door</option>
+          <option value="sneeze">sneeze</option>
+          <option value="gasp">gasp</option>
+        </select>
+        <button id="sst_add_sound">Add</button>
+      </div>
+
+      <div class="st-block">
+        <label>Sounds registered (click to remove):</label>
+        <div id="sst_sound_list"></div>
+      </div>
+
+      <hr class="sysHR" />
+      <div style="font-size: 0.85em; color: #aaa">
+        Uses lightweight context heuristics (progressive/past tense, negation checks) to avoid false positives.
+      </div>
+    </div>
+  </div>
 </div>
