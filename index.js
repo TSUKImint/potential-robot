@@ -3,6 +3,9 @@
 
 import { eventSource, event_types } from "../../../../script.js";
 
+export { MODULE_NAME };
+const MODULE_NAME = 'ContextualSounds';
+
 // Extension configuration
 const extensionName = "st-context-sounds";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
@@ -669,8 +672,9 @@ jQuery(async () => {
     
     try {
         // Load HTML UI
-        const settingsHtml = await $.get(`${extensionFolderPath}/settings.html`);
-        $('#extensions_settings2').append(settingsHtml);
+        const getContainer = () => $(document.getElementById('extensions_settings2') ?? document.getElementById('extensions_settings'));
+        const settingsHtml = $(await $.get(`${extensionFolderPath}/settings.html`));
+        getContainer().append(settingsHtml);
         
         // Bind event handlers
         $('#context-sounds-enabled').on('change', onEnabledToggle);
