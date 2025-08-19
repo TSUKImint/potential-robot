@@ -1,0 +1,22 @@
+{
+  "basket": [
+    "sounds/basket.mp3",
+  ],
+  "footstep": [
+    "sounds/footstep/step1.mp3",
+    "sounds/footstep/step2.mp3"
+  ],
+  "rustle": [
+    "sounds/rustle/rustle1.mp3"
+  ],
+  "door": [
+    "sounds/door/open1.mp3",
+    "sounds/door/close1.mp3"
+  ],
+  "sneeze": [
+    "sounds/sneeze/sneeze1.mp3"
+  ],
+  "gasp": [
+    "sounds/gasp/gasp1.mp3"
+  ]
+}
