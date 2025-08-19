@@ -1,1 +1,274 @@
-/* All style elements for your extension go here */
+/* SillyTavern Contextual Sound Effects Extension Styles */
+
+.context-sounds-settings {
+    margin: 10px 0;
+}
+
+.context-sounds_block {
+    margin: 10px 0;
+    padding: 5px 0;
+}
+
+.context-sounds_block.flex-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.context-sounds_block h4 {
+    margin: 15px 0 10px 0;
+    color: var(--SmartThemeBodyColor);
+    font-weight: 600;
+}
+
+.context-sounds_block h5 {
+    margin: 10px 0 5px 0;
+    color: var(--SmartThemeBodyColor);
+    font-weight: 500;
+}
+
+.context-sounds_block label {
+    color: var(--SmartThemeBodyColor);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.context-sounds_block small {
+    color: var(--SmartThemeQuoteColor);
+    font-size: 11px;
+    display: block;
+    margin-top: 2px;
+}
+
+.context-sounds_block .flex-container small {
+    margin-left: auto;
+    margin-top: 0;
+}
+
+/* Slider Styles */
+.context-sounds_block .slider {
+    width: 100%;
+    margin: 5px 0;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 5px;
+    background: var(--SmartThemeBlurTintColor);
+    outline: none;
+    border-radius: 3px;
+}
+
+.context-sounds_block .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    background: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.context-sounds_block .slider::-moz-range-thumb {
+    width: 15px;
+    height: 15px;
+    background: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+}
+
+/* Categories */
+.context-sounds-categories {
+    background: var(--SmartThemeBlurTintColor);
+    border-radius: 8px;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+.context-sounds-categories .context-sounds_block {
+    margin: 8px 0;
+}
+
+/* Sound Library */
+.context-sounds-sound-list {
+    background: var(--SmartThemeBlurTintColor);
+    border-radius: 6px;
+    padding: 8px;
+    margin: 8px 0;
+}
+
+.sound-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    margin: 4px 0;
+    background: var(--SmartThemeBorderColor);
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.sound-item span {
+    color: var(--SmartThemeBodyColor);
+    font-weight: 500;
+}
+
+.sound-item small {
+    color: var(--SmartThemeQuoteColor);
+    font-size: 11px;
+    text-align: right;
+}
+
+/* Info Section */
+.context-sounds-info {
+    background: var(--SmartThemeBlurTintColor);
+    border-radius: 6px;
+    padding: 10px;
+    margin: 8px 0;
+}
+
+.info-item {
+    margin: 8px 0;
+    padding: 6px 0;
+}
+
+.info-item strong {
+    color: var(--SmartThemeBodyColor);
+    font-size: 12px;
+}
+
+.info-item small {
+    color: var(--SmartThemeQuoteColor);
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+/* Advanced Settings */
+details.context-sounds_block {
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 6px;
+    padding: 8px;
+    margin: 10px 0;
+}
+
+details.context-sounds_block summary {
+    color: var(--SmartThemeBodyColor);
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+details.context-sounds_block[open] summary {
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    margin-bottom: 10px;
+}
+
+/* Input Styles */
+.context-sounds_block input[type="number"] {
+    background: var(--SmartThemeBlurTintColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    color: var(--SmartThemeBodyColor);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    width: 80px;
+}
+
+.context-sounds_block input[type="checkbox"] {
+    margin-right: 8px;
+    transform: scale(1.1);
+}
+
+/* Button Styles */
+#context-sounds-test {
+    background: var(--SmartThemeHighlightColor);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.2s;
+}
+
+#context-sounds-test:hover {
+    background: var(--SmartThemeHighlightColor);
+    filter: brightness(1.1);
+}
+
+#context-sounds-refresh-library {
+    background: var(--SmartThemeBodyColor);
+    color: var(--SmartThemeEmColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s;
+}
+
+#context-sounds-refresh-library:hover {
+    background: var(--SmartThemeBlurTintColor);
+}
+
+/* Code styling */
+code {
+    background: var(--SmartThemeBlurTintColor);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--SmartThemeBodyColor);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sound-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .sound-item small {
+        text-align: left;
+    }
+    
+    .context-sounds_block .slider {
+        width: 100%;
+    }
+}
+
+/* Animation for drawer */
+.inline-drawer-content {
+    transition: max-height 0.3s ease-in-out;
+}
+
+/* Focus styles for accessibility */
+.context-sounds_block input:focus,
+.context-sounds_block button:focus {
+    outline: 2px solid var(--SmartThemeHighlightColor);
+    outline-offset: 2px;
+}
+
+/* Hover effects */
+.sound-item:hover {
+    background: var(--SmartThemeBlurTintColor);
+    transition: background-color 0.2s;
+}
+
+.context-sounds_block label:hover {
+    color: var(--SmartThemeHighlightColor);
+    transition: color 0.2s;
+}
+
+/* Loading states */
+.context-sounds-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.context-sounds-loading::after {
+    content: "Loading...";
+    color: var(--SmartThemeQuoteColor);
+    font-size: 11px;
+    margin-left: 8px;
+}/* All style elements for your extension go here */
