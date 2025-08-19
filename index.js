@@ -1,7 +1,8 @@
 // SillyTavern Contextual Sound Effects Extension
 // Advanced contextual sound effects with AI-assisted triggers and smart context rules
 
-import { eventSource, event_types } from "../../../../script.js";
+import { eventSource, event_types, saveSettingsDebounced } from "../../../../script.js";
+import { getContext, extension_settings } from "../../../extensions.js";
 
 export { MODULE_NAME };
 const MODULE_NAME = 'ContextualSounds';
