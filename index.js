@@ -1,18 +1,13 @@
 // SillyTavern Contextual Sound Effects Extension
-// Advanced contextual sound effects with AI-assisted triggers and smart context rules
+// Plays sound effects based on actions and dialogue with AI-assisted context analysis
 
-import { eventSource, event_types, saveSettingsDebounced } from "../../../../script.js";
-import { getContext, extension_settings } from "../../../extensions.js";
-
-export { MODULE_NAME };
-const MODULE_NAME = 'ContextualSounds';
+import { eventSource, event_types, saveSettingsDebounced } from '../../../../../script.js';
+import { extension_settings } from '../../../../extensions.js';
 
 // Extension configuration
-const extensionName = "st-context-sounds";
-const extensionFolderPath = `scripts/extensions/${extensionName}`;
-
-// Get SillyTavern context
-const { extensionSettings, saveSettingsDebounced, addLocaleData } = SillyTavern.getContext();
+const extensionName = 'st-context-sounds';
+const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
+const MODULE_NAME = 'ContextSounds';
 
 // Default settings
 const defaultSettings = {
@@ -21,13 +16,10 @@ const defaultSettings = {
     maxConcurrentSounds: 3,
     preventRepeatMs: 2000,
     contextSensitivity: 0.8,
-    enableBuiltInSounds: true,
-    enableCustomSounds: true,
     soundVariations: true,
     debugMode: false,
-    useAiAnalysis: true,
+    useAiAnalysis: false,
     aiAnalysisTimeout: 5000,
-    enableSoundSuggestions: false,
     enabledCategories: {
         emotions: true,
         actions: true,
@@ -86,13 +78,6 @@ const soundLibrary = {
                 { regex: /\b(?:opened|closed|shut|slammed)\s+(?:the\s+)?door\b/gi, context: 'action' },
                 { regex: /\bdoor\s+(?:opened|closed|creaked|slammed)\b/gi, context: 'action' }
             ]
-        },
-        rustle: {
-            variations: ['rustle1.mp3', 'paper_rustle.mp3', 'cloth_rustle.mp3'],
-            patterns: [
-                { regex: /\b(rustled|rustling|grabbed|grabbing|reached|reaching)\s+(?:for|into|through)/gi, context: 'action' },
-                { regex: /\brustl\w+/gi, context: 'direct' }
-            ]
         }
     },
     ambient: {
@@ -138,7 +123,23 @@ let extensionState = {
     isInitialized: false
 };
 
-// Context analysis engine with AI integration
+// Settings management
+function getSettings() {
+    if (!extension_settings[extensionName]) {
+        extension_settings[extensionName] = structuredClone(defaultSettings);
+    }
+
+    // Ensure all default keys exist
+    for (const key in defaultSettings) {
+        if (extension_settings[extensionName][key] === undefined) {
+            extension_settings[extensionName][key] = defaultSettings[key];
+        }
+    }
+
+    return extension_settings[extensionName];
+}
+
+// Context analysis engine
 class ContextAnalyzer {
     constructor() {
         this.sentimentWords = {
@@ -146,8 +147,6 @@ class ContextAnalyzer {
             negative: ['sad', 'angry', 'frustrated', 'disappointed', 'upset', 'annoyed'],
             neutral: ['said', 'replied', 'responded', 'mentioned', 'noted']
         };
-        this.aiAnalysisCache = new Map();
-        this.aiAnalysisEnabled = true;
     }
 
     async analyzeContext(text, soundKey, pattern) {
@@ -164,34 +163,18 @@ class ContextAnalyzer {
         };
 
         // Check for negation patterns first (highest priority)
-        if (soundLibrary[this.getCategoryForSound(soundKey)][soundKey].excludePatterns) {
-            for (const excludePattern of soundLibrary[this.getCategoryForSound(soundKey)][soundKey].excludePatterns) {
+        const category = this.getCategoryForSound(soundKey);
+        const soundData = soundLibrary[category]?.[soundKey];
+        
+        if (soundData?.excludePatterns) {
+            for (const excludePattern of soundData.excludePatterns) {
                 if (excludePattern.test(context.sentence)) {
                     return { score: 0, reason: 'excluded_by_pattern', context };
                 }
             }
         }
 
-        // Try AI analysis first if enabled
-        if (this.aiAnalysisEnabled && getSettings().useAiAnalysis) {
-            try {
-                const aiScore = await this.analyzeWithAI(text, soundKey, context);
-                if (aiScore !== null) {
-                    return {
-                        score: aiScore,
-                        reason: 'ai_analyzed',
-                        context,
-                        match: match[0]
-                    };
-                }
-            } catch (error) {
-                if (getSettings().debugMode) {
-                    console.warn('[Context Sounds] AI analysis failed, falling back to pattern matching:', error);
-                }
-            }
-        }
-
-        // Fallback to pattern-based analysis
+        // Pattern-based analysis
         let score = 0.5; // Base score
 
         // Pattern-specific scoring
@@ -209,9 +192,6 @@ class ContextAnalyzer {
                 score += 0.3; // Direct mentions get bonus
                 break;
         }
-
-        // Temporal context (recent actions)
-        score += this.analyzeTemporalContext(context, soundKey);
 
         // Sentiment alignment
         score += this.analyzeSentiment(context, soundKey);
@@ -293,11 +273,6 @@ class ContextAnalyzer {
         return score;
     }
 
-    analyzeTemporalContext(context, soundKey) {
-        // This could be expanded to analyze previous messages
-        return 0;
-    }
-
     analyzeSentiment(context, soundKey) {
         let score = 0;
         const sentence = context.sentence.toLowerCase();
@@ -316,104 +291,13 @@ class ContextAnalyzer {
         return score;
     }
 
-    async analyzeWithAI(text, soundKey, context) {
-        const cacheKey = `${soundKey}:${context.sentence.slice(0, 50)}`;
-        
-        // Check cache first
-        if (this.aiAnalysisCache.has(cacheKey)) {
-            return this.aiAnalysisCache.get(cacheKey);
-        }
-
-        try {
-            // Import generateQuietPrompt function
-            const { generateQuietPrompt } = await import("../../../../script.js");
-            
-            const analysisPrompt = this.buildAnalysisPrompt(text, soundKey, context);
-            
-            const response = await generateQuietPrompt(analysisPrompt);
-            const score = this.parseAIResponse(response, soundKey);
-            
-            // Cache the result
-            this.aiAnalysisCache.set(cacheKey, score);
-            
-            // Limit cache size
-            if (this.aiAnalysisCache.size > 100) {
-                const firstKey = this.aiAnalysisCache.keys().next().value;
-                this.aiAnalysisCache.delete(firstKey);
+    getCategoryForSound(soundKey) {
+        for (const [category, sounds] of Object.entries(soundLibrary)) {
+            if (sounds[soundKey]) {
+                return category;
             }
-            
-            return score;
-            
-        } catch (error) {
-            if (getSettings().debugMode) {
-                console.error('[Context Sounds] AI analysis error:', error);
-            }
-            return null; // Fall back to pattern matching
         }
-    }
-
-    buildAnalysisPrompt(text, soundKey, context) {
-        const category = this.getCategoryForSound(soundKey);
-        const soundDescription = this.getSoundDescription(soundKey);
-        
-        return `Analyze if a "${soundKey}" sound effect should play for this text.
-
-Text to analyze: "${context.sentence}"
-Full context: "${context.surrounding}"
-
-Sound: ${soundDescription}
-Category: ${category}
-
-Rules:
-- Only return a score 0.0-1.0 (0.0 = definitely no sound, 1.0 = definitely play sound)
-- Score 0.8+ for clear actions happening NOW (e.g., "she laughed")  
-- Score 0.0-0.3 for references/memories (e.g., "I remember her laugh")
-- Score 0.0 for negations (e.g., "don't laugh", "stop walking")
-- Score 0.0 for questions/instructions (e.g., "can you laugh?")
-
-Examples:
-"She laughed at the joke" → 0.9 (clear action)
-"You have a nice laugh" → 0.1 (reference, not action)
-"Stop laughing" → 0.0 (negation)
-"He walked to the door" → 0.9 (clear movement)
-"I hate walking" → 0.0 (opinion, not action)
-
-Response format: Just the score number (e.g., "0.8")`;
-    }
-
-    getSoundDescription(soundKey) {
-        const descriptions = {
-            laugh: 'Laughter, giggling, chuckling sounds',
-            cry: 'Crying, sobbing, weeping sounds', 
-            sigh: 'Sighing, exhaling sounds',
-            footsteps: 'Footstep, walking, movement sounds',
-            door: 'Door opening, closing, slamming sounds',
-            rustle: 'Rustling, grabbing, reaching sounds',
-            wind: 'Wind, breeze ambient sounds',
-            rain: 'Rain, precipitation ambient sounds',
-            whisper: 'Whispering, soft speech sounds',
-            shout: 'Shouting, yelling, loud speech sounds'
-        };
-        return descriptions[soundKey] || `${soundKey} sound effects`;
-    }
-
-    parseAIResponse(response, soundKey) {
-        try {
-            // Extract number from response
-            const match = response.match(/\b0\.\d+|\b1\.0+|\b0\b|\b1\b/);
-            if (match) {
-                const score = parseFloat(match[0]);
-                if (score >= 0 && score <= 1) {
-                    if (getSettings().debugMode) {
-                        console.log(`[Context Sounds] AI analysis for ${soundKey}: ${score} (raw: "${response.slice(0, 100)}")`);
-                    }
-                    return score;
-                }
-            }
-        } catch (error) {
-            console.warn('[Context Sounds] Failed to parse AI response:', error);
-        }
-        return null; // Fall back to pattern matching
+        return null;
     }
 }
 
@@ -503,7 +387,7 @@ class AudioManager {
         let bestScore = 0;
 
         for (const pattern of soundData.patterns) {
-            const analysis = this.contextAnalyzer.analyzeContext(text, soundKey, pattern);
+            const analysis = await this.contextAnalyzer.analyzeContext(text, soundKey, pattern);
             
             if (analysis.score > bestScore && analysis.score >= getSettings().contextSensitivity) {
                 bestScore = analysis.score;
@@ -580,22 +464,6 @@ class AudioManager {
     }
 }
 
-// Settings management
-function getSettings() {
-    if (!extensionSettings[extensionName]) {
-        extensionSettings[extensionName] = structuredClone(defaultSettings);
-    }
-
-    // Ensure all default keys exist
-    for (const key in defaultSettings) {
-        if (extensionSettings[extensionName][key] === undefined) {
-            extensionSettings[extensionName][key] = defaultSettings[key];
-        }
-    }
-
-    return extensionSettings[extensionName];
-}
-
 // Event handlers
 async function onMessageReceived(data) {
     if (!data?.message?.mes) return;
@@ -633,20 +501,8 @@ function onSensitivityChange() {
 }
 
 function onTestSound() {
-    const testText = "She laughed at the joke and walked to the door.";
+    const testText = $('#context-sounds-test-text').val() || "She laughed at the joke and walked to the door.";
     audioManager.processMessage(testText);
-}
-
-async function onSuggestSounds() {
-    const testText = $('#context-sounds-test-text').val() || "She laughed nervously and stepped back.";
-    const suggestions = await audioManager.contextAnalyzer.suggestSoundsForText(testText);
-    
-    let suggestionText = 'No suggestions';
-    if (suggestions.length > 0) {
-        suggestionText = suggestions.map(s => `${s.sound} (${Math.round(s.confidence * 100)}%)`).join(', ');
-    }
-    
-    $('#context-sounds-suggestions').text(suggestionText);
 }
 
 // UI Setup
@@ -673,9 +529,8 @@ jQuery(async () => {
     
     try {
         // Load HTML UI
-        const getContainer = () => $(document.getElementById('extensions_settings2') ?? document.getElementById('extensions_settings'));
-        const settingsHtml = $(await $.get(`${extensionFolderPath}/settings.html`));
-        getContainer().append(settingsHtml);
+        const settingsHtml = await $.get(`${extensionFolderPath}/settings.html`);
+        $('#extensions_settings2').append(settingsHtml);
         
         // Bind event handlers
         $('#context-sounds-enabled').on('change', onEnabledToggle);
@@ -705,3 +560,5 @@ jQuery(async () => {
         console.error('[Context Sounds] Failed to load extension:', error);
     }
 });
+
+export { MODULE_NAME };
