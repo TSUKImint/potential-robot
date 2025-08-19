@@ -1,564 +1,334 @@
-// SillyTavern Contextual Sound Effects Extension
-// Plays sound effects based on actions and dialogue with AI-assisted context analysis
+/* Smart Sound Triggers for SillyTavern
+   - Context-aware heuristics (no blind keyword match)
+   - Sound variations & cooldowns
+   - Simple user library via settings (URLs)
+*/
 
-import { eventSource, event_types, saveSettingsDebounced } from '../../../../../script.js';
-import { extension_settings } from '../../../../extensions.js';
+import { extension_settings, getContext, loadExtensionSettings } from "../../../extensions.js";
+import { saveSettingsDebounced } from "../../../../script.js";
 
-// Extension configuration
-const extensionName = 'st-context-sounds';
+const extensionName = "st-sound-triggers";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
-const MODULE_NAME = 'ContextSounds';
+const extensionSettings = extension_settings[extensionName] = extension_settings[extensionName] || {};
 
-// Default settings
 const defaultSettings = {
-    enabled: true,
-    volume: 0.7,
-    maxConcurrentSounds: 3,
-    preventRepeatMs: 2000,
-    contextSensitivity: 0.8,
-    soundVariations: true,
-    debugMode: false,
-    useAiAnalysis: false,
-    aiAnalysisTimeout: 5000,
-    enabledCategories: {
-        emotions: true,
-        actions: true,
-        ambient: true,
-        dialogue: true
-    }
+  enabled: true,
+  volume: 0.8,
+  cooldown: 2.5, // per-action cooldown in seconds
+  // user-supplied sounds are stored as { action: 'laugh', url: '...' }
+  userSounds: []
 };
 
-// Sound library with context-aware patterns
-const soundLibrary = {
-    emotions: {
-        laugh: {
-            variations: ['laugh1.mp3', 'giggle.mp3', 'chuckle.mp3'],
-            patterns: [
-                { regex: /\b(laughed|laughing|giggles?|giggling|chuckles?|chuckling)\b/gi, context: 'action' },
-                { regex: /\b(haha|hehe|lol)\b/gi, context: 'direct' },
-                { regex: /"[^"]*(?:ha|he){2,}[^"]*"/gi, context: 'dialogue' }
-            ],
-            excludePatterns: [
-                /\b(?:don't|stop|quit|without|no|never)\s+(?:\w+\s+){0,2}(?:laugh|giggl|chuckl)/gi,
-                /\b(?:laugh|giggl|chuckl)\w*\s+(?:at|about|over)\b/gi
-            ]
-        },
-        cry: {
-            variations: ['cry1.mp3', 'sob.mp3', 'weep.mp3'],
-            patterns: [
-                { regex: /\b(cried|crying|sobbed|sobbing|wept|weeping|tears?\s+(?:fell|stream|flow))/gi, context: 'action' },
-                { regex: /"[^"]*(?:\*sniff\*|\*sob\*).*"/gi, context: 'dialogue' }
-            ],
-            excludePatterns: [
-                /\b(?:don't|stop|quit|without|no)\s+(?:\w+\s+){0,2}(?:cry|sob|weep)/gi
-            ]
-        },
-        sigh: {
-            variations: ['sigh1.mp3', 'exhale.mp3'],
-            patterns: [
-                { regex: /\b(sighed|sighing)\b/gi, context: 'action' },
-                { regex: /"[^"]*\*sigh\*[^"]*"/gi, context: 'dialogue' }
-            ]
-        }
-    },
-    actions: {
-        footsteps: {
-            variations: ['step1.mp3', 'step2.mp3', 'footsteps.mp3'],
-            patterns: [
-                { regex: /\b(walked|walking|stepped|stepping|strolled|strolling|paced|pacing)\b/gi, context: 'action' },
-                { regex: /\bfootsteps?\b/gi, context: 'direct' }
-            ],
-            excludePatterns: [
-                /\b(?:stopped|quit|ceased)\s+(?:\w+\s+){0,2}(?:walk|step|stroll|pac)/gi
-            ]
-        },
-        door: {
-            variations: ['door_open.mp3', 'door_close.mp3', 'door_creak.mp3'],
-            patterns: [
-                { regex: /\b(?:opened|closed|shut|slammed)\s+(?:the\s+)?door\b/gi, context: 'action' },
-                { regex: /\bdoor\s+(?:opened|closed|creaked|slammed)\b/gi, context: 'action' }
-            ]
-        }
-    },
-    ambient: {
-        wind: {
-            variations: ['wind1.mp3', 'breeze.mp3'],
-            patterns: [
-                { regex: /\bwind\s+(?:blew|howled|whistled|rustled)/gi, context: 'ambient' },
-                { regex: /\b(?:gentle|strong|cold)\s+(?:breeze|wind)\b/gi, context: 'ambient' }
-            ]
-        },
-        rain: {
-            variations: ['rain_light.mp3', 'rain_heavy.mp3'],
-            patterns: [
-                { regex: /\brain\s+(?:fell|pattered|drummed|began)/gi, context: 'ambient' },
-                { regex: /\b(?:raindrops?|downpour|drizzl\w+)\b/gi, context: 'ambient' }
-            ]
-        }
-    },
-    dialogue: {
-        whisper: {
-            variations: ['whisper1.mp3', 'whisper_soft.mp3'],
-            patterns: [
-                { regex: /\b(whispered|whispering)\b/gi, context: 'dialogue' },
-                { regex: /"[^"]*"\s*(?:she|he|they)\s+whispered/gi, context: 'dialogue' }
-            ]
-        },
-        shout: {
-            variations: ['shout1.mp3', 'yell.mp3'],
-            patterns: [
-                { regex: /\b(shouted|yelled|screamed|called out)\b/gi, context: 'dialogue' },
-                { regex: /"[^"]*[!]{2,}[^"]*"/gi, context: 'dialogue' }
-            ]
-        }
-    }
+// --- small action dictionary: verbs & patterns
+const ACTION_DEFINITIONS = {
+  laugh: {
+    words: ["laugh", "laughed", "laughing", "giggle", "giggled", "giggling", "chuckle", "chuckled", "chuckling", "snicker", "snickered", "cackle"],
+    nounForms: ["laugh"], // when used as noun (e.g., "a laugh")
+    defaultVariants: [
+      `${extensionFolderPath}/sounds/laugh/laugh1.mp3`,
+      `${extensionFolderPath}/sounds/laugh/laugh2.mp3`
+    ]
+  },
+  footstep: {
+    words: ["step","steps","stepped","walking","walked","footstep","footsteps","stomp","stomped"],
+    nounForms: ["footstep","step"],
+    defaultVariants: [
+      `${extensionFolderPath}/sounds/footstep/step1.mp3`,
+      `${extensionFolderPath}/sounds/footstep/step2.mp3`
+    ]
+  },
+  rustle: {
+    words: ["rustle","rustled","rustling","rummage","rummaged","shuffle","shuffled","grabbed","grabs","grabbing","fumble","fumbled"],
+    nounForms: ["rustle","shuffle"],
+    defaultVariants: [
+      `${extensionFolderPath}/sounds/rustle/rustle1.mp3`,
+      `${extensionFolderPath}/sounds/rustle/rustle2.mp3`
+    ]
+  },
+  door: {
+    words: ["open","opened","opens","close","closed","closing","shut","shuts"],
+    nounForms: ["door"],
+    defaultVariants: [
+      `${extensionFolderPath}/sounds/door/open1.mp3`,
+      `${extensionFolderPath}/sounds/door/close1.mp3`
+    ]
+  },
+  sneeze: {
+    words: ["sneeze","sneezed","sneezing","achoo"],
+    nounForms: ["sneeze"],
+    defaultVariants: [
+      `${extensionFolderPath}/sounds/sneeze/sneeze1.mp3`,
+      `${extensionFolderPath}/sounds/sneeze/sneeze2.mp3`
+    ]
+  },
+  gasp: {
+    words: ["gasp","gasped","gasping","caught breath","caught my breath"],
+    nounForms: ["gasp"],
+    defaultVariants: [
+      `${extensionFolderPath}/sounds/gasp/gasp1.mp3`,
+      `${extensionFolderPath}/sounds/gasp/gasp2.mp3`
+    ]
+  }
 };
 
-// Extension state
-let extensionState = {
-    audioContext: null,
-    audioBuffers: new Map(),
-    recentSounds: new Map(),
-    loadingPromises: new Map(),
-    isInitialized: false
-};
+// internal state
+const lastPlayed = {};
+const lastVariantIndex = {};
+let soundLibrary = {}; // action -> array of urls
 
-// Settings management
-function getSettings() {
-    if (!extension_settings[extensionName]) {
-        extension_settings[extensionName] = structuredClone(defaultSettings);
-    }
+// Load settings (create defaults if absent)
+async function loadSettings() {
+  extension_settings[extensionName] = extension_settings[extensionName] || {};
+  Object.assign(extension_settings[extensionName], Object.assign({}, defaultSettings, extension_settings[extensionName]));
+  // Ensure fields exist
+  if (!Array.isArray(extension_settings[extensionName].userSounds))
+    extension_settings[extensionName].userSounds = [];
 
-    // Ensure all default keys exist
-    for (const key in defaultSettings) {
-        if (extension_settings[extensionName][key] === undefined) {
-            extension_settings[extensionName][key] = defaultSettings[key];
-        }
-    }
-
-    return extension_settings[extensionName];
+  // init sound library from defaults + user-sounds
+  buildSoundLibrary();
+  // update UI values if present
+  $("#sst_enable").prop("checked", extension_settings[extensionName].enabled);
+  $("#sst_volume").val(extension_settings[extensionName].volume);
+  $("#sst_cooldown").val(extension_settings[extensionName].cooldown);
+  renderSoundList();
 }
 
-// Context analysis engine
-class ContextAnalyzer {
-    constructor() {
-        this.sentimentWords = {
-            positive: ['happy', 'joy', 'cheerful', 'delighted', 'pleased', 'content'],
-            negative: ['sad', 'angry', 'frustrated', 'disappointed', 'upset', 'annoyed'],
-            neutral: ['said', 'replied', 'responded', 'mentioned', 'noted']
-        };
-    }
-
-    async analyzeContext(text, soundKey, pattern) {
-        const lowerText = text.toLowerCase();
-        const match = pattern.regex.exec(text);
-        
-        if (!match) return { score: 0, reason: 'no_match' };
-
-        const context = {
-            sentence: this.extractSentence(text, match.index),
-            surrounding: this.getSurroundingWords(text, match.index, 10),
-            position: match.index / text.length,
-            match: match[0]
-        };
-
-        // Check for negation patterns first (highest priority)
-        const category = this.getCategoryForSound(soundKey);
-        const soundData = soundLibrary[category]?.[soundKey];
-        
-        if (soundData?.excludePatterns) {
-            for (const excludePattern of soundData.excludePatterns) {
-                if (excludePattern.test(context.sentence)) {
-                    return { score: 0, reason: 'excluded_by_pattern', context };
-                }
-            }
-        }
-
-        // Pattern-based analysis
-        let score = 0.5; // Base score
-
-        // Pattern-specific scoring
-        switch (pattern.context) {
-            case 'action':
-                score += this.analyzeActionContext(context, soundKey);
-                break;
-            case 'dialogue':
-                score += this.analyzeDialogueContext(context, soundKey);
-                break;
-            case 'ambient':
-                score += this.analyzeAmbientContext(context, soundKey);
-                break;
-            case 'direct':
-                score += 0.3; // Direct mentions get bonus
-                break;
-        }
-
-        // Sentiment alignment
-        score += this.analyzeSentiment(context, soundKey);
-
-        return { 
-            score: Math.max(0, Math.min(1, score)), 
-            reason: 'pattern_analyzed',
-            context,
-            match: match[0]
-        };
-    }
-
-    extractSentence(text, position) {
-        const sentences = text.split(/[.!?]+/);
-        let currentPos = 0;
-        
-        for (const sentence of sentences) {
-            if (currentPos + sentence.length > position) {
-                return sentence.trim();
-            }
-            currentPos += sentence.length + 1;
-        }
-        return '';
-    }
-
-    getSurroundingWords(text, position, wordCount = 5) {
-        const words = text.split(/\s+/);
-        let currentPos = 0;
-        let wordIndex = 0;
-
-        for (let i = 0; i < words.length; i++) {
-            if (currentPos > position) {
-                wordIndex = i;
-                break;
-            }
-            currentPos += words[i].length + 1;
-        }
-
-        const start = Math.max(0, wordIndex - wordCount);
-        const end = Math.min(words.length, wordIndex + wordCount);
-        return words.slice(start, end).join(' ');
-    }
-
-    analyzeActionContext(context, soundKey) {
-        let score = 0;
-        
-        // Look for action verbs in past tense (more definitive)
-        if (/\b\w+ed\b/.test(context.sentence)) score += 0.2;
-        
-        // Present continuous suggests ongoing action
-        if (/\b\w+ing\b/.test(context.sentence)) score += 0.1;
-        
-        // Character attribution
-        if (/\b(?:she|he|they|I)\s+\w+ed\b/.test(context.sentence)) score += 0.15;
-        
-        return score;
-    }
-
-    analyzeDialogueContext(context, soundKey) {
-        let score = 0;
-        
-        // Quoted speech
-        if (context.sentence.includes('"')) score += 0.2;
-        
-        // Dialogue tags
-        if (/\b(?:said|whispered|shouted|asked|replied)\b/.test(context.sentence)) score += 0.15;
-        
-        return score;
-    }
-
-    analyzeAmbientContext(context, soundKey) {
-        let score = 0;
-        
-        // Environmental descriptions
-        if (/\b(?:outside|air|atmosphere|environment|weather)\b/.test(context.surrounding)) {
-            score += 0.2;
-        }
-        
-        return score;
-    }
-
-    analyzeSentiment(context, soundKey) {
-        let score = 0;
-        const sentence = context.sentence.toLowerCase();
-        
-        // Match sentiment with sound type
-        if (soundKey.includes('laugh') || soundKey.includes('giggle')) {
-            if (this.sentimentWords.positive.some(word => sentence.includes(word))) {
-                score += 0.1;
-            }
-        } else if (soundKey.includes('cry') || soundKey.includes('sob')) {
-            if (this.sentimentWords.negative.some(word => sentence.includes(word))) {
-                score += 0.1;
-            }
-        }
-        
-        return score;
-    }
-
-    getCategoryForSound(soundKey) {
-        for (const [category, sounds] of Object.entries(soundLibrary)) {
-            if (sounds[soundKey]) {
-                return category;
-            }
-        }
-        return null;
-    }
+// Build sound library from ACTION_DEFINITIONS + user-sounds
+function buildSoundLibrary() {
+  soundLibrary = {};
+  Object.keys(ACTION_DEFINITIONS).forEach(action=>{
+    soundLibrary[action] = (ACTION_DEFINITIONS[action].defaultVariants || []).slice();
+  });
+  // Add user sounds
+  extension_settings[extensionName].userSounds.forEach(s=>{
+    soundLibrary[s.action] = soundLibrary[s.action] || [];
+    soundLibrary[s.action].push(s.url);
+  });
 }
 
-// Audio management
-class AudioManager {
-    constructor() {
-        this.contextAnalyzer = new ContextAnalyzer();
-    }
-
-    async initialize() {
-        try {
-            extensionState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            await this.loadDefaultSounds();
-            extensionState.isInitialized = true;
-            console.log('[Context Sounds] Audio system initialized');
-        } catch (error) {
-            console.error('[Context Sounds] Failed to initialize audio:', error);
-        }
-    }
-
-    async loadDefaultSounds() {
-        const loadPromises = [];
-        
-        for (const [category, sounds] of Object.entries(soundLibrary)) {
-            if (!getSettings().enabledCategories[category]) continue;
-            
-            for (const [soundKey, soundData] of Object.entries(sounds)) {
-                for (const variation of soundData.variations) {
-                    const soundPath = `${extensionFolderPath}/sounds/${variation}`;
-                    loadPromises.push(this.loadSound(soundPath, `${soundKey}_${variation}`));
-                }
-            }
-        }
-
-        await Promise.allSettled(loadPromises);
-    }
-
-    async loadSound(path, key) {
-        if (extensionState.loadingPromises.has(key)) {
-            return extensionState.loadingPromises.get(key);
-        }
-
-        const loadPromise = this.fetchAndDecodeAudio(path, key);
-        extensionState.loadingPromises.set(key, loadPromise);
-        
-        try {
-            await loadPromise;
-        } catch (error) {
-            console.warn(`[Context Sounds] Could not load sound: ${path}`, error);
-        }
-        
-        return loadPromise;
-    }
-
-    async fetchAndDecodeAudio(path, key) {
-        const response = await fetch(path);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const arrayBuffer = await response.arrayBuffer();
-        const audioBuffer = await extensionState.audioContext.decodeAudioData(arrayBuffer);
-        
-        extensionState.audioBuffers.set(key, audioBuffer);
-        return audioBuffer;
-    }
-
-    async playSound(soundKey, text, variation = null) {
-        if (!extensionState.isInitialized || !getSettings().enabled) return;
-
-        const category = this.contextAnalyzer.getCategoryForSound(soundKey);
-        if (!category || !getSettings().enabledCategories[category]) return;
-
-        const soundData = soundLibrary[category][soundKey];
-        if (!soundData) return;
-
-        // Prevent sound spam
-        const now = Date.now();
-        const lastPlayed = extensionState.recentSounds.get(soundKey) || 0;
-        if (now - lastPlayed < getSettings().preventRepeatMs) {
-            if (getSettings().debugMode) {
-                console.log(`[Context Sounds] Prevented repeat of ${soundKey}`);
-            }
-            return;
-        }
-
-        // Context analysis
-        let bestMatch = null;
-        let bestScore = 0;
-
-        for (const pattern of soundData.patterns) {
-            const analysis = await this.contextAnalyzer.analyzeContext(text, soundKey, pattern);
-            
-            if (analysis.score > bestScore && analysis.score >= getSettings().contextSensitivity) {
-                bestScore = analysis.score;
-                bestMatch = analysis;
-            }
-        }
-
-        if (!bestMatch || bestScore < getSettings().contextSensitivity) {
-            if (getSettings().debugMode) {
-                console.log(`[Context Sounds] Context check failed for ${soundKey}, score: ${bestScore}`);
-            }
-            return;
-        }
-
-        // Select variation
-        const variations = soundData.variations;
-        const selectedVariation = variation || variations[Math.floor(Math.random() * variations.length)];
-        const audioKey = `${soundKey}_${selectedVariation}`;
-
-        if (!extensionState.audioBuffers.has(audioKey)) {
-            console.warn(`[Context Sounds] Audio buffer not found: ${audioKey}`);
-            return;
-        }
-
-        // Play the sound
-        try {
-            const source = extensionState.audioContext.createBufferSource();
-            const gainNode = extensionState.audioContext.createGain();
-            
-            source.buffer = extensionState.audioBuffers.get(audioKey);
-            gainNode.gain.value = getSettings().volume;
-            
-            source.connect(gainNode);
-            gainNode.connect(extensionState.audioContext.destination);
-            
-            source.start();
-            
-            extensionState.recentSounds.set(soundKey, now);
-            
-            if (getSettings().debugMode) {
-                console.log(`[Context Sounds] Played ${audioKey} (score: ${bestScore.toFixed(2)}, match: "${bestMatch.match}")`);
-            }
-            
-        } catch (error) {
-            console.error('[Context Sounds] Error playing sound:', error);
-        }
-    }
-
-    async processMessage(messageText) {
-        if (!messageText || !extensionState.isInitialized) return;
-
-        const promises = [];
-        
-        for (const [category, sounds] of Object.entries(soundLibrary)) {
-            if (!getSettings().enabledCategories[category]) continue;
-            
-            for (const [soundKey, soundData] of Object.entries(sounds)) {
-                for (const pattern of soundData.patterns) {
-                    if (pattern.regex.test(messageText)) {
-                        promises.push(this.playSound(soundKey, messageText));
-                        break; // Only one pattern per sound per message
-                    }
-                }
-            }
-        }
-
-        // Limit concurrent sounds
-        const maxConcurrent = getSettings().maxConcurrentSounds;
-        if (promises.length > maxConcurrent) {
-            promises.splice(maxConcurrent);
-        }
-
-        await Promise.allSettled(promises);
-    }
+// Minimal helper: sanitize & tokenize
+function wordsFrom(text) {
+  return text
+    .replace(/[^\w\s']/g, ' ')
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
 }
 
-// Event handlers
-async function onMessageReceived(data) {
-    if (!data?.message?.mes) return;
-    await audioManager.processMessage(data.message.mes);
+// Heuristic engine: returns list of actions with score
+function analyzeTextForActions(text) {
+  const lower = text.toLowerCase();
+  const tokens = wordsFrom(text);
+  const results = [];
+
+  // quick negation detection around a word (small window)
+  function hasNegationBefore(idx) {
+    const negations = ["stop","don't","do","do not","never","without","no","not","avoid"];
+    const windowStart = Math.max(0, idx - 3);
+    for (let i = windowStart; i < idx; i++) {
+      if (negations.includes(tokens[i])) return true;
+    }
+    return false;
+  }
+
+  // helper: is the target used as noun phrase like "a laugh" or "your laugh"
+  function isNounUsage(term) {
+    const nounPattern = new RegExp(`\\b(a|an|the|your|my|his|her)\\s+\\w*${term}\\b`, 'i');
+    return nounPattern.test(text);
+  }
+
+  Object.entries(ACTION_DEFINITIONS).forEach(([action, def])=>{
+    let bestScore = 0;
+    def.words.forEach((w)=>{
+      // find occurrences
+      // exact token match if present
+      for (let i=0;i<tokens.length;i++){
+        if (tokens[i] === w || tokens[i].startsWith(w)) {
+          // base score
+          let score = 0.5;
+
+          // prefer verb-ish forms (ing, ed, s) or multiword "is laughing"/"was laughing"
+          if (/\b(is|was|were|are|am|been|be)\b\s+\w*${w}\b/i.test(lower) || /ing$/.test(w) || /ed$/.test(w) || /s$/.test(w)) {
+            score += 0.35;
+          }
+
+          // if surrounding words include action subjects (he/she/they/character names) add small bonus
+          const subjWindow = tokens.slice(Math.max(0,i-3), i+1).join(' ');
+          if (/\b(he|she|they|i|we|you)\b/.test(subjWindow)) score += 0.12;
+
+          // if used as noun -> heavy penalty
+          if (def.nounForms && def.nounForms.some(n=> isNounUsage(n))) {
+            score -= 1.0;
+          }
+
+          // negation check
+          if (hasNegationBefore(i) || /\bstop(ped|ing)?\b/.test(lower) || /\bdon't\b|\bdo not\b/.test(lower)) {
+            score -= 1.0;
+          }
+
+          if (score > bestScore) bestScore = score;
+        }
+      }
+    });
+
+    // Additional pattern: explicit past/prog forms e.g., "she laughed", "they are laughing"
+    if (new RegExp(`\\b(${def.words.join("|")})\\b`, 'i').test(lower)) {
+      // raise bestScore slightly
+      bestScore = Math.max(bestScore, 0.6);
+    }
+
+    if (bestScore > 0.5) {
+      results.push({ action, score: bestScore });
+    }
+  });
+
+  // sort by score desc
+  results.sort((a,b)=>b.score-a.score);
+  return results;
 }
 
-function onEnabledToggle() {
-    const enabled = $('#context-sounds-enabled').prop('checked');
-    getSettings().enabled = enabled;
+// choose a variant (avoid immediate repetition)
+function chooseVariant(action) {
+  const list = (soundLibrary[action] || []).slice();
+  if (!list.length) return null;
+  // choose random but not same as last
+  let idx = Math.floor(Math.random()*list.length);
+  if (list.length > 1 && idx === (lastVariantIndex[action]||-1)) {
+    idx = (idx + 1) % list.length;
+  }
+  lastVariantIndex[action] = idx;
+  return list[idx];
+}
+
+// play sound with volume and cooldown checks
+function playSound(action) {
+  const now = Date.now()/1000;
+  const cooldown = Number(extension_settings[extensionName].cooldown) || 2.5;
+  if (lastPlayed[action] && (now - lastPlayed[action]) < cooldown) return false;
+  const url = chooseVariant(action);
+  if (!url) return false;
+
+  const audio = new Audio(url);
+  audio.volume = Number(extension_settings[extensionName].volume) || 0.8;
+  audio.play().catch(err=>{
+    // won't crash ST if audio blocked
+    console.warn("SST: audio play failed", err);
+  });
+  lastPlayed[action] = now;
+  return true;
+}
+
+// Main handler (message events)
+function onMessageReceived(evt) {
+  try {
+    if (!extension_settings[extensionName].enabled) return;
+    // evt.data might have message contents depending on event shape
+    // SillyTavern events often pass an object; guard accordingly:
+    const payload = evt?.data || evt;
+    // message text might be in payload.text or payload.content depending on event
+    const text = (payload && (payload.text || payload.content || payload.message || payload.body)) || ('' + payload);
+    if (!text || typeof text !== 'string') return;
+
+    // analyze
+    const actions = analyzeTextForActions(text);
+    // For each candidate action, attempt to play (stop after first successful to avoid many overlapping sounds)
+    for (let a of actions) {
+      const played = playSound(a.action);
+      if (played) break;
+    }
+  } catch (e) {
+    console.error("SST: onMessageReceived error", e);
+  }
+}
+
+// --- UI handlers
+function renderSoundList() {
+  const $list = $("#sst_sound_list");
+  $list.empty();
+  const all = extension_settings[extensionName].userSounds || [];
+  if (!all.length) {
+    $list.text("(no custom sounds)");
+    return;
+  }
+  all.forEach((s, idx)=>{
+    const $b = $(`<div style="margin:4px 0;"><a href="#" class="sst-remove" data-idx="${idx}" title="Click to remove">${s.action} → ${s.url}</a></div>`);
+    $list.append($b);
+  });
+}
+
+function addUserSound(action, url) {
+  extension_settings[extensionName].userSounds = extension_settings[extensionName].userSounds || [];
+  extension_settings[extensionName].userSounds.push({ action, url });
+  saveSettingsDebounced();
+  buildSoundLibrary();
+  renderSoundList();
+}
+
+// wire UI + settings persistence
+jQuery(async ()=> {
+  // append settings HTML
+  const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
+  $("#extensions_settings").append(settingsHtml);
+
+  // load settings into UI
+  loadSettings();
+
+  // UI interactions
+  $("#sst_enable").on("input change", (e)=>{
+    extension_settings[extensionName].enabled = Boolean($(e.target).prop("checked"));
     saveSettingsDebounced();
-    
-    if (enabled && !extensionState.isInitialized) {
-        audioManager.initialize();
-    }
-}
+  });
 
-function onVolumeChange() {
-    const volume = parseFloat($('#context-sounds-volume').val());
-    getSettings().volume = volume;
-    $('#context-sounds-volume-display').text(`${Math.round(volume * 100)}%`);
+  $("#sst_volume").on("input change", (e)=>{
+    extension_settings[extensionName].volume = Number($(e.target).val());
     saveSettingsDebounced();
-}
+  });
 
-function onCategoryToggle(category) {
-    const enabled = $(`#context-sounds-category-${category}`).prop('checked');
-    getSettings().enabledCategories[category] = enabled;
+  $("#sst_cooldown").on("input change", (e)=>{
+    extension_settings[extensionName].cooldown = Number($(e.target).val());
     saveSettingsDebounced();
-}
+  });
 
-function onSensitivityChange() {
-    const sensitivity = parseFloat($('#context-sounds-sensitivity').val());
-    getSettings().contextSensitivity = sensitivity;
-    $('#context-sounds-sensitivity-display').text(`${Math.round(sensitivity * 100)}%`);
+  $("#sst_add_sound").on("click", ()=>{
+    const url = $("#sst_new_sound_url").val().trim();
+    const action = $("#sst_new_sound_action").val();
+    if (!url) {
+      toastr.warning("Provide a sound URL or relative path.");
+      return;
+    }
+    addUserSound(action, url);
+    $("#sst_new_sound_url").val("");
+  });
+
+  $("#sst_sound_list").on("click", ".sst-remove", function(e){
+    e.preventDefault();
+    const idx = Number($(this).data("idx"));
+    extension_settings[extensionName].userSounds.splice(idx, 1);
     saveSettingsDebounced();
-}
+    buildSoundLibrary();
+    renderSoundList();
+  });
 
-function onTestSound() {
-    const testText = $('#context-sounds-test-text').val() || "She laughed at the joke and walked to the door.";
-    audioManager.processMessage(testText);
-}
-
-// UI Setup
-async function loadSettingsUI() {
-    const settings = getSettings();
-    
-    $('#context-sounds-enabled').prop('checked', settings.enabled);
-    $('#context-sounds-volume').val(settings.volume);
-    $('#context-sounds-volume-display').text(`${Math.round(settings.volume * 100)}%`);
-    $('#context-sounds-sensitivity').val(settings.contextSensitivity);
-    $('#context-sounds-sensitivity-display').text(`${Math.round(settings.contextSensitivity * 100)}%`);
-    
-    // Category toggles
-    for (const category of Object.keys(settings.enabledCategories)) {
-        $(`#context-sounds-category-${category}`).prop('checked', settings.enabledCategories[category]);
+  // subscribe to ST events: MESSAGE_RECEIVED (incoming / completed message)
+  try {
+    // eventSource and event_types are available in ST UI environment
+    if (typeof eventSource !== "undefined" && typeof event_types !== "undefined") {
+      eventSource.on(event_types.MESSAGE_RECEIVED, onMessageReceived);
+      // also listen to CHARACTER_MESSAGE_RENDERED if present (for streaming completions)
+      if (event_types.CHARACTER_MESSAGE_RENDERED) {
+        eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, onMessageReceived);
+      }
+    } else if (window.SillyTavern && SillyTavern.getContext) {
+      // fallback: subscribe through SillyTavern API if present
+      const ctx = SillyTavern.getContext();
+      if (ctx && ctx.eventSource && ctx.event_types) {
+        ctx.eventSource.on(ctx.event_types.MESSAGE_RECEIVED, onMessageReceived);
+      }
+    } else {
+      console.warn("SST: No eventSource/event_types - unable to auto-listen to messages.");
     }
-}
+  } catch (e) {
+    console.error("SST: event subscription error", e);
+  }
 
-// Initialize extension
-const audioManager = new AudioManager();
-
-jQuery(async () => {
-    console.log('[Context Sounds] Loading extension...');
-    
-    try {
-        // Load HTML UI
-        const settingsHtml = await $.get(`${extensionFolderPath}/settings.html`);
-        $('#extensions_settings2').append(settingsHtml);
-        
-        // Bind event handlers
-        $('#context-sounds-enabled').on('change', onEnabledToggle);
-        $('#context-sounds-volume').on('input', onVolumeChange);
-        $('#context-sounds-sensitivity').on('input', onSensitivityChange);
-        $('#context-sounds-test').on('click', onTestSound);
-        
-        // Category toggles
-        for (const category of Object.keys(defaultSettings.enabledCategories)) {
-            $(`#context-sounds-category-${category}`).on('change', () => onCategoryToggle(category));
-        }
-        
-        // Load settings
-        await loadSettingsUI();
-        
-        // Listen for message events
-        eventSource.on(event_types.MESSAGE_RECEIVED, onMessageReceived);
-        
-        // Initialize audio if enabled
-        if (getSettings().enabled) {
-            await audioManager.initialize();
-        }
-        
-        console.log('[Context Sounds] Extension loaded successfully');
-        
-    } catch (error) {
-        console.error('[Context Sounds] Failed to load extension:', error);
-    }
 });
-
-export { MODULE_NAME };
