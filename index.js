@@ -8,7 +8,7 @@ const MODULE_NAME = 'ContextualSounds';
 
 // Extension configuration
 const extensionName = "st-context-sounds";
-const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
+const extensionFolderPath = `scripts/extensions/${extensionName}`;
 
 // Get SillyTavern context
 const { extensionSettings, saveSettingsDebounced, addLocaleData } = SillyTavern.getContext();
