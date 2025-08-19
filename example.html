@@ -23,6 +23,12 @@
                 <small>Higher values = more strict context matching</small>
             </div>
 
+            <div class="context-sounds_block flex-container">
+                <input id="context-sounds-ai-analysis" type="checkbox" />
+                <label for="context-sounds-ai-analysis">🤖 Enable AI Context Analysis</label>
+                <small>Uses your connected LLM for smarter context detection</small>
+            </div>
+
             <hr class="sysHR" />
             
             <!-- Sound Categories -->
@@ -79,6 +85,18 @@
                     <label for="context-sounds-debug">Debug Mode</label>
                     <small>Log sound trigger decisions to console</small>
                 </div>
+                
+                <div class="context-sounds_block">
+                    <label for="context-sounds-ai-timeout">AI Analysis Timeout (ms):</label>
+                    <input id="context-sounds-ai-timeout" type="number" min="1000" max="30000" step="1000" value="5000" />
+                    <small>Maximum time to wait for AI analysis before fallback</small>
+                </div>
+                
+                <div class="context-sounds_block flex-container">
+                    <input id="context-sounds-sound-suggestions" type="checkbox" />
+                    <label for="context-sounds-sound-suggestions">Enable AI Sound Suggestions</label>
+                    <small>AI can suggest new sounds for unrecognized patterns</small>
+                </div>
             </details>
 
             <hr class="sysHR" />
@@ -118,11 +136,20 @@
 
             <hr class="sysHR" />
             
-            <!-- Testing -->
+            <!-- Testing & AI Features -->
             <div class="context-sounds_block">
-                <h4>Testing</h4>
-                <button id="context-sounds-test" class="menu_button">Test Sound Effects</button>
-                <small>Plays example sounds with sample text: "She laughed and walked to the door."</small>
+                <h4>Testing & AI Features</h4>
+                <div class="context-sounds_block">
+                    <label for="context-sounds-test-text">Test Text:</label>
+                    <input id="context-sounds-test-text" type="text" placeholder="She laughed nervously and stepped back." style="width: 100%; margin: 5px 0;" />
+                </div>
+                <div class="context-sounds_block flex-container">
+                    <button id="context-sounds-test" class="menu_button">Test Sound Effects</button>
+                    <button id="context-sounds-suggest" class="menu_button">AI Suggest Sounds</button>
+                </div>
+                <div class="context-sounds_block">
+                    <small><strong>AI Suggestions:</strong> <span id="context-sounds-suggestions">Enter text and click "AI Suggest Sounds"</span></small>
+                </div>
             </div>
             
             <!-- Performance Info -->
@@ -130,16 +157,17 @@
                 <summary>Performance & Info</summary>
                 <div class="context-sounds-info">
                     <div class="info-item">
-                        <strong>AI-Assisted Context Analysis:</strong><br>
-                        <small>Uses advanced pattern matching and context rules to prevent false triggers</small>
+                        <strong>🤖 AI-Powered Context Analysis:</strong><br>
+                        <small>Uses your connected LLM (OpenAI, Claude, local models) for intelligent context understanding</small>
                     </div>
                     <div class="info-item">
                         <strong>Smart Exclusion Patterns:</strong><br>
-                        <small>Automatically excludes phrases like "don't laugh" or "stop walking"</small>
+                        <small>AI automatically excludes phrases like "don't laugh" or "stop walking"</small>
                     </div>
                     <div class="info-item">
                         <strong>Loaded Sounds:</strong> <span id="context-sounds-loaded-count">0</span><br>
-                        <strong>Memory Usage:</strong> <span id="context-sounds-memory">Calculating...</span>
+                        <strong>Memory Usage:</strong> <span id="context-sounds-memory">Calculating...</span><br>
+                        <strong>AI Status:</strong> <span id="context-sounds-ai-status">Checking...</span>
                     </div>
                 </div>
             </details>
