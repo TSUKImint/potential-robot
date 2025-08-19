@@ -1,11 +1,13 @@
 {
-    "display_name": "Name Displayed in SillyTavern",
-    "loading_order": 9,
+    "display_name": "Contextual Sound Effects",
+    "loading_order": 15,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
-    "author": "yourNameHere",
+    "author": "SillyTavern Community",
     "version": "1.0.0",
-    "homePage": "yourUrlHere"
+    "homePage": "https://github.com/your-username/st-context-sounds",
+    "auto_update": true,
+    "description": "AI-powered contextual sound effects that intelligently trigger based on story actions and dialogue context, not simple keyword matching."
 }
